@@ -1,0 +1,145 @@
+Install:
+Docker must be installed and running on your system. If your are using Windows, for me it is usefull WLS and DockerDesktop
+Minikube
+Helm --> sudo snap install helm --classic
+
+Interesting tool:
+k9s for UI experience:
+
+* curl -LO https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz
+* tar -xvf k9s_Linux_amd64.tar.gz
+* sudo mv k9s /usr/local/bin/
+
+
+Step1: 
+minikube start --driver=docker
+
+Use minikube with the virualization driver set to Docker. So, the Kubernetes node (only 1 since minikube) will run as Docker containers instead of VMs.
+
+
+Step2:
+minikube addons enable metallb
+minikube addons enable ingress
+
+These enable MetalLB (for LoadBalancer IPs) and the NGINX Ingress controller inside Minikube.
+
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
+To install what you need, so MetalLB components needed.
+Here, I ahve several issues and a lot of debug fixing, installing and deleting, but this should work.
+Then do the confidguration 
+Waits
+kubectl apply -f manifest-metallb/metallb-config.yaml
+
+
+Step3:
+rm -rf nginx-ingress # to avoid eventual conflicts
+helm pull oci://ghcr.io/nginxinc/charts/nginx-ingress --untar --version 0.17.1
+kubectl apply -f nginx-ingress/crds/
+
+
+
+helm pull oci://ghcr.io/nginxinc/charts/nginx-ingress --untar --version 0.17.1
+kubectl apply -f nginx-ingress/crds/
+helm install nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.17.1
+# da capire
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.service.type=LoadBalancer \
+  --set controller.service.loadBalancerIP=192.168.49.20
+
+
+Attention:
+The error means the IngressClass resource named nginx already exists in your cluster, but it was not created by Helm (so Helm refuses to take ownership of it).
+kubectl delete ingressclass nginx
+helm install nginx-ingress oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.17.1
+
+
+This usually happens if you installed the ingress controller manually or via another method previously.
+
+Check this if it work: 
+kubectl get pods -n default -l app.kubernetes.io/name=nginx-ingress
+
+
+Step4:
+kubectl create namespace cloud
+
+#Step5:
+kubectl apply -f pv-pvc/nextcloud-pv.yaml
+kubectl apply -f pv-pvc/nextcloud-pvc.yaml -n cloud
+kubectl apply -f pv-pvc/mariadb-pv.yaml
+kubectl apply -f pv-pvc/mariadb-pvc.yaml -n cloud
+
+#PersistentVolume (PV) is a cluster-wide resource, not tied to any namespace. It represents a piece of storage in the cluster. Because it's a resource shared across the entire cluster, it does not belong to any specific namespace.
+
+#PersistentVolumeClaim (PVC) is a namespaced resource. It lives inside a namespace because it represents a request for storage by a particular workload or application running in that namespace.
+
+
+#Step6:
+kubectl apply -f secrets/sys-cloud-secrets.yaml -n cloud
+kubectl apply -f secrets/mariadb-secrets.yaml -n cloud
+kubectl apply -f secrets/redis-secrets.yaml -n cloud
+
+#Step7:
+kubectl apply -f deployments/mariadb-deployment.yaml -n cloud
+kubectl apply -f deployments/mariadb-service.yaml -n cloud
+
+#Step8:
+kubectl apply -f deployments/redis-deployment.yaml -n cloud
+kubectl apply -f deployments/redis-service.yaml -n cloud
+
+Step9:
+helm repo add nextcloud https://nextcloud.github.io/helm/     #could be skipped if already present
+helm repo update
+
+helm install nextcloud nextcloud/nextcloud -f helm/values.yaml -n cloud
+
+kubectl apply -f helm/ingress_init.yaml -n cloud
+
+minikube ssh
+sudo mkdir -p /mnt/data/nextcloud
+Since your pod is running with fsGroup: 33 (which corresponds to www-data group), run:
+
+sudo chown -R 33:33 /mnt/data/nextcloud
+
+exit
+
+kubectl delete pod -n cloud nextcloud-7d48b9f584-nrz7f
+
+
+now, run : 
+kubectl edit configmap -n kube-system kube-proxy
+
+type i to go into insert mode in vim,  then add the below code, then type esc, then :wq
+
+add under the first kind: ... (in config ... )
+mode: "ipvs"
+ipvs:
+  strictARP: true
+  
+ 
+ make the restart
+ 
+ kubectl -n kube-system delete pods -l k8s-app=kube-proxy
+ 
+
+
+
+
+
+
+
+
+
+
+kubectl edit configmap config -n metallb-system
+
+
+- 192.168.49.20-192.168.49.30     ip from miniku ip
+
+
+
+kubectl port-forward svc/nextcloud 8080:80 -n cloud
+
+
+
+minikube service nextcloud -n cloud --url
