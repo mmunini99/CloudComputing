@@ -1,0 +1,57 @@
+impostato e abilitato la possibilità di registrarsi come utenti, passando da adim e abilitando la possibilità di registrazione.
+
+Imnpostato gruppo di default per chi si registra: è il common group
+
+
+poi impostato un dominio email per una sicurezza maggiore che è quello test.com
+
+impostato di default uno spazio minimo di 5 gb --> si può pensare ad una priority. Per farlo,con nano modificato aggiungendo   'default_quota' => '5GB', in config file  e poi rimesso dentro
+
+
+
+quando crei i file , in windows usa questo prima sul bash file  sed -i 's/\r$//' script_user_tries_upload_file.sh
+
+
+
+This HTML response means:
+
+The container name (nextcloud_docker-app-1) is not listed as a trusted domain in your Nextcloud config.
+
+
+To allow internal Docker access via http://nextcloud_docker-app-1, you need to add it to the trusted_domains list in the Nextcloud config.
+
+
+
+'trusted_domains' =>
+  array (
+    0 => 'localhost',
+    1 => 'nextcloud_docker-app-1',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @task(3)
+    def observe_1KB_file(self):
+            try:
+                output = self.client.get(f"/remote.php/dav/files/{self.USERNAME}/1KB file", auth=self.AUTH)
+                logger.info(f"[{self.USERNAME}] GET 1 KB file (status: {output.status_code})")
+            except Exception as e:
+                logger.error(f"[{self.USERNAME}] GET 1 KB file failed: {e}")
