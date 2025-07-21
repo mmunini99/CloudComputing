@@ -1,0 +1,23 @@
+<network>
+    <name>net-config</name>
+
+
+    <metadata>
+        <description>
+            NAT network for Kubernetes development VMs.
+        </description>
+    </metadata>
+
+    <forward mode="nat">
+        <nat>
+            <port start="1024" end="65535"/>
+        </nat>
+    </forward>
+
+    <!-- Subnet: 192.168.133.0/24 -->
+    <ip address="10.10.0.1" netmask="255.255.255.0">
+        <dhcp>
+            <range start="10.10.0.2" end="10.10.0.50"/>
+        </dhcp>
+    </ip>
+</network>
